@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Air Quality Sensor Plots</title>
+    <!-- Include Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+
+<body>
+    <div id="temperaturePlot"></div>
+    <div id="rhPlot"></div>
+    <div id="pm25Plot"></div>
+    <div id="vocIndexPlot"></div>
+    <script>
+        function updatePlots() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(sensors => {
+                    createPlot(sensors, 'Temperature', 'temperaturePlot');
+                    createPlot(sensors, 'RH', 'rhPlot');
+                    createPlot(sensors, 'PM25', 'pm25Plot');
+                    createPlot(sensors, 'VocIndex', 'vocIndexPlot');
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function createPlot(sensors, field, plotDivId) {
+            var sensorIds = Object.keys(sensors);
+            var traces = [];
+
+
+            sensorIds.forEach(id => {
+                const sensor = sensors[id]
+                const timestamps = sensor.map(data => new Date(data.Timestamp));
+                const data = sensor.map(data => data[field]);
+                const trace = {
+                    x: timestamps,
+                    y: data,
+                    mode: 'lines+markers',
+                    name: sensor[0].Name
+                };
+                traces.push(trace);
+            })
+
+            var layout = {
+                title: field + ' Data',
+                xaxis: { title: 'Time' },
+                yaxis: { title: field }
+            };
+
+            Plotly.newPlot(plotDivId, traces, layout);
+        }
+
+        updatePlots();
+        setInterval(updatePlots, 5 * 60 * 1000);
+    </script>
+</body>
+
+</html>
