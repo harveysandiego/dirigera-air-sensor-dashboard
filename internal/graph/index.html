@@ -39,19 +39,30 @@
                     y: data,
                     mode: 'lines+markers',
                     name: sensor[0].Name,
-                    line: {shape: 'spline'},
+                    line: {
+                        shape: 'spline'
+                    },
                     type: 'scatter'
                 };
                 traces.push(trace);
-            })
+            });
 
             var layout = {
                 title: field + ' Data',
-                xaxis: { title: 'Time' },
-                yaxis: { title: field }
+                xaxis: {
+                    title: 'Time',
+                },
+                yaxis: {
+                    title: field,
+                    fixedrange: true
+                }
             };
 
-            Plotly.newPlot(plotDivId, traces, layout);
+            var config = {
+                responsive: true
+            };
+
+            Plotly.newPlot(plotDivId, traces, layout, config);
         }
 
         updatePlots();
