@@ -38,7 +38,9 @@
                     x: timestamps,
                     y: data,
                     mode: 'lines+markers',
-                    name: sensor[0].Name
+                    name: sensor[0].Name,
+                    line: {shape: 'spline'},
+                    type: 'scatter'
                 };
                 traces.push(trace);
             })
