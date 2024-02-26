@@ -61,7 +61,7 @@ func main() {
 	http.HandleFunc("/data", w.ServeData)
 	go func(errs chan<- error) {
 		log.Info("Starting webserver")
-		err := http.ListenAndServe(":80", nil)
+		err := http.ListenAndServe(":8080", nil)
 		if err != nil {
 			errs <- err
 		}
