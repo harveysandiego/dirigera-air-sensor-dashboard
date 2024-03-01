@@ -5,13 +5,24 @@
     <title>Air Quality Sensor Plots</title>
     <!-- Include Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        @media only screen and (min-width: 1200px) {
+            .grid-container {
+                display: grid;
+                grid-template-columns: auto auto;
+                grid-template-rows: auto auto;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <div id="temperaturePlot"></div>
-    <div id="rhPlot"></div>
-    <div id="pm25Plot"></div>
-    <div id="vocIndexPlot"></div>
+    <div class="grid-container">
+        <div id="temperaturePlot"></div>
+        <div id="rhPlot"></div>
+        <div id="pm25Plot"></div>
+        <div id="vocIndexPlot"></div>
+    </div>
     <script>
         function updatePlots() {
             fetch('/data')
@@ -29,7 +40,6 @@
             var sensorIds = Object.keys(sensors);
             var traces = [];
 
-
             sensorIds.forEach(id => {
                 const sensor = sensors[id]
                 const timestamps = sensor.map(data => new Date(data.Timestamp));
@@ -37,7 +47,7 @@
                 const trace = {
                     x: timestamps,
                     y: data,
-                    mode: 'lines+markers',
+                    mode: 'lines',
                     name: sensor[0].Name,
                     line: {
                         shape: 'spline'
@@ -51,6 +61,21 @@
                 title: field + ' Data',
                 xaxis: {
                     title: 'Time',
+                    rangeselector: {
+                        buttons: [{
+                            step: 'hour',
+                            stepmode: 'backward',
+                            count: 1,
+                            label: '1h'
+                        }, {
+                            step: 'day',
+                            stepmode: 'backward',
+                            count: 1,
+                            label: '1d'
+                        }, {
+                            step: 'all',
+                        }]
+                    }
                 },
                 yaxis: {
                     title: field,
