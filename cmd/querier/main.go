@@ -27,12 +27,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = hub.Auth()
+	err = hub.Discover()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Debug(hub.AuthToken)
+	err = hub.Auth()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	update := make(chan bool)
 	done := make(chan bool)

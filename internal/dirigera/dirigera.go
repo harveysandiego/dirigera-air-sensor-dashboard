@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,12 +16,14 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/hashicorp/mdns"
 )
 
 type (
 	Dirigera struct {
 		configFile string
-		HubUrl     string
+		hubUrl     string
+		Interface  string
 		AuthToken  string
 	}
 
@@ -59,11 +63,16 @@ func New(filename string) (*Dirigera, error) {
 
 	file, err := os.Open(filename)
 	if err != nil {
+		if os.IsNotExist(err) {
+			log.Debug("No config")
+			return diregera, nil
+		}
+
 		return nil, err
 	}
 	defer file.Close()
 
-	log.Debug("Reading history")
+	log.Debug("Reading config")
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(diregera)
 	if err != nil {
@@ -74,19 +83,70 @@ func New(filename string) (*Dirigera, error) {
 	return diregera, nil
 }
 
+func (d *Dirigera) Discover() error {
+	var ifi *net.Interface
+	var err error
+	if d.Interface == "" {
+		log.Debug("No interface name given")
+		ifi = nil
+	} else {
+		ifi, err = net.InterfaceByName(d.Interface)
+		if err != nil {
+			return err
+		}
+	}
+
+	entries := make(chan *mdns.ServiceEntry, 4)
+	timeout := 30 * time.Second
+	params := &mdns.QueryParam{
+		Service:             "_ihsp._tcp",
+		Domain:              "local",
+		Timeout:             timeout,
+		Interface:           ifi,
+		Entries:             entries,
+		WantUnicastResponse: false,
+		DisableIPv4:         false,
+		DisableIPv6:         true,
+	}
+	err = mdns.Query(params)
+	if err != nil {
+		return err
+	}
+
+	select {
+	case entry := <-entries:
+		log.Debug(entry)
+		if strings.Contains(entry.Info, "DIRIGERA") {
+			log.Info("Found hub")
+			d.hubUrl = fmt.Sprintf("https://%s:%d", entry.AddrV4, entry.Port)
+			log.Debug(d.hubUrl)
+		}
+	case <-time.After(timeout):
+		err = errors.New("timeout discovering hub")
+	}
+
+	if err != nil {
+		close(entries)
+		return err
+	}
+
+	close(entries)
+	return nil
+}
+
 func (d *Dirigera) Auth() error {
 	if d.AuthToken != "" {
 		log.Info("Auth token already set, skipping auth")
 		return nil
 	}
 
-	if d.HubUrl == "" {
+	if d.hubUrl == "" {
 		return errors.New("hub URL not set")
 	}
 
 	log.Info("Starting auth")
 
-	authUrl, err := url.Parse(d.HubUrl + "/v1/oauth/authorize")
+	authUrl, err := url.Parse(d.hubUrl + "/v1/oauth/authorize")
 	if err != nil {
 		return err
 	}
@@ -131,6 +191,7 @@ func (d *Dirigera) Auth() error {
 	}
 
 	d.AuthToken = token
+	log.Debug(d.AuthToken)
 
 	err = d.saveConfig()
 	if err != nil {
@@ -152,7 +213,7 @@ func (d Dirigera) generateToken(code string, codeVerifier string) (string, error
 	tokenParams.Add("name", hostname)
 	tokenParams.Add("grant_type", "authorization_code")
 
-	req, err := http.NewRequest("POST", d.HubUrl+"/v1/oauth/token", strings.NewReader(tokenParams.Encode()))
+	req, err := http.NewRequest("POST", d.hubUrl+"/v1/oauth/token", strings.NewReader(tokenParams.Encode()))
 	if err != nil {
 		return "", err
 	}
@@ -200,7 +261,7 @@ func (d Dirigera) saveConfig() error {
 }
 
 func (d Dirigera) ListEnvironmentSensors() (*[]Device, error) {
-	req, err := http.NewRequest("GET", d.HubUrl+"/v1/devices", nil)
+	req, err := http.NewRequest("GET", d.hubUrl+"/v1/devices", nil)
 	if err != nil {
 		return nil, err
 	}
