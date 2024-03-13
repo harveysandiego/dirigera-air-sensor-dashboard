@@ -5,6 +5,7 @@ import (
 	"dirigeraquerier/internal/dirigera"
 	"dirigeraquerier/internal/reader"
 	"dirigeraquerier/internal/writer"
+	"flag"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,7 +18,15 @@ const configFile = "config.json"
 const dataFile = "data.json"
 
 func main() {
-	log.SetLevel(log.InfoLevel)
+	var debug bool
+	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
+	flag.Parse()
+
+	if debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 
 	// Hub has self-signed cert
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
