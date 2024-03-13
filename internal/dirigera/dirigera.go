@@ -97,7 +97,7 @@ func (d *Dirigera) Discover() error {
 	}
 
 	entries := make(chan *mdns.ServiceEntry, 4)
-	timeout := 30 * time.Second
+	timeout := 60 * time.Second
 	params := &mdns.QueryParam{
 		Service:             "_ihsp._tcp",
 		Domain:              "local",
@@ -113,35 +113,31 @@ func (d *Dirigera) Discover() error {
 		return err
 	}
 
-	select {
-	case entry := <-entries:
-		log.Debug(entry)
-		if strings.Contains(entry.Info, "DIRIGERA") {
-			log.Info("Found hub")
-			d.hubUrl = fmt.Sprintf("https://%s:%d", entry.AddrV4, entry.Port)
-			log.Debug(d.hubUrl)
+	for {
+		select {
+		case entry := <-entries:
+			log.Debug(entry)
+			if strings.Contains(entry.Info, "DIRIGERA") {
+				log.Info("Found hub")
+				d.hubUrl = fmt.Sprintf("https://%s:%d", entry.AddrV4, entry.Port)
+				log.Debug(d.hubUrl)
+				close(entries)
+				return nil
+			}
+		case <-time.After(timeout):
+			return errors.New("timeout discovering hub")
 		}
-	case <-time.After(timeout):
-		err = errors.New("timeout discovering hub")
 	}
-
-	if err != nil {
-		close(entries)
-		return err
-	}
-
-	close(entries)
-	return nil
 }
 
 func (d *Dirigera) Auth() error {
+	if d.hubUrl == "" {
+		return errors.New("hub URL not set")
+	}
+
 	if d.AuthToken != "" {
 		log.Info("Auth token already set, skipping auth")
 		return nil
-	}
-
-	if d.hubUrl == "" {
-		return errors.New("hub URL not set")
 	}
 
 	log.Info("Starting auth")
