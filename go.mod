@@ -2,7 +2,7 @@ module dirigeraquerier
 
 go 1.22.0
 
-require github.com/charmbracelet/log v0.3.1
+require github.com/charmbracelet/log v0.4.0
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
