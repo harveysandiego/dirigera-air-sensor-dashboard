@@ -5,17 +5,20 @@ import (
 	"dirigeraquerier/internal/dirigera"
 	"dirigeraquerier/internal/reader"
 	"dirigeraquerier/internal/writer"
+	"errors"
 	"flag"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 )
 
 const configFile = "config.json"
 const dataFile = "data.json"
+const maxRetries = 5
 
 func main() {
 	var debug bool
@@ -36,7 +39,20 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = hub.Discover()
+discovery:
+	for range maxRetries {
+		err = hub.Discover()
+		switch {
+		case err == nil:
+			break discovery
+		case errors.Is(err, dirigera.HubTimeout):
+			log.Info("Discovery timed out, will retry in a moment")
+			time.Sleep(time.Second)
+		default:
+			log.Fatal(err)
+		}
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}

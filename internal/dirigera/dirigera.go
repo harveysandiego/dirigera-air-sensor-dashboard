@@ -56,6 +56,8 @@ type (
 	}
 )
 
+var HubTimeout = errors.New("timeout discovering hub")
+
 func New(filename string) (*Dirigera, error) {
 	diregera := &Dirigera{
 		configFile: filename,
@@ -106,7 +108,7 @@ func (d *Dirigera) Discover() error {
 		Entries:             entries,
 		WantUnicastResponse: false,
 		DisableIPv4:         false,
-		DisableIPv6:         true,
+		DisableIPv6:         false,
 	}
 	err = mdns.Query(params)
 	if err != nil {
@@ -116,16 +118,29 @@ func (d *Dirigera) Discover() error {
 	for {
 		select {
 		case entry := <-entries:
-			log.Debug(entry)
+			log.Debug(*entry)
 			if strings.Contains(entry.Info, "DIRIGERA") {
 				log.Info("Found hub")
-				d.hubUrl = fmt.Sprintf("https://%s:%d", entry.AddrV4, entry.Port)
+				var ip string
+				if entry.AddrV4 != nil {
+					ip = entry.AddrV4.String()
+				} else {
+					for _, field := range entry.InfoFields {
+						if strings.HasPrefix(field, "ipv4address=") {
+							ip = strings.TrimPrefix(field, "ipv4address=")
+						}
+					}
+				}
+				if ip == "" {
+					return errors.New("mDNS reply is missing IP info")
+				}
+				d.hubUrl = fmt.Sprintf("https://%s:%d", ip, entry.Port)
 				log.Debug(d.hubUrl)
 				close(entries)
 				return nil
 			}
 		case <-time.After(timeout):
-			return errors.New("timeout discovering hub")
+			return HubTimeout
 		}
 	}
 }
