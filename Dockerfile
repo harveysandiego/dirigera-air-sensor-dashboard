@@ -31,6 +31,7 @@ COPY --from=builder /usr/src/app/internal/graph /usr/src/app/internal/graph
 # Set the user
 USER appuser
 
-EXPOSE 8080
+EXPOSE 8080      
+EXPOSE 5353/udp
 
 CMD ["./querier"]
