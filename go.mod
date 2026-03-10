@@ -4,7 +4,7 @@ go 1.23.0
 
 toolchain go1.23.7
 
-require github.com/charmbracelet/log v0.4.2
+require github.com/charmbracelet/log v1.0.0
 
 require (
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
@@ -19,7 +19,7 @@ require (
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
+	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/hashicorp/mdns v1.0.6
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
