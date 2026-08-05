@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go test -race ./...
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate tag is semver
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Tag '$TAG' is not a valid semver tag, skipping release"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      # No CGO dependencies (see Dockerfile's CGO_ENABLED=0), so cross-compiling
+      # for both common homelab/Pi targets needs nothing beyond GOOS/GOARCH.
+      - name: Build binaries
+        run: |
+          mkdir dist
+          for platform in linux/amd64 linux/arm64; do
+            GOOS="${platform%/*}"
+            GOARCH="${platform#*/}"
+            out="dist/querier-${GOOS}-${GOARCH}"
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build -o "$out" ./cmd/querier
+          done
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes
