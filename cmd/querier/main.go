@@ -22,6 +22,55 @@ const configFile = "config.json"
 const dataFile = "data.json"
 const maxRetries = 5
 
+// discoverRetryBackoff is how long discoverWithRetry pauses between a
+// timed-out discovery attempt and the next one. A package variable, rather
+// than a literal, so tests can shrink it instead of a real test run taking
+// several real seconds.
+var discoverRetryBackoff = time.Second
+
+// discoverer is the subset of *dirigera.Dirigera's API discoverWithRetry
+// depends on, so tests can substitute a fake instead of real mDNS.
+type discoverer interface {
+	Discover() error
+}
+
+// discoverWithRetry calls d.Discover() up to maxRetries times, pausing and
+// retrying whenever it times out, and returns the first non-timeout result
+// (success, or a fatal error) — or the last timeout, if every attempt did.
+func discoverWithRetry(d discoverer, maxRetries int) error {
+	var err error
+	for range maxRetries {
+		err = d.Discover()
+		switch {
+		case err == nil:
+			return nil
+		case errors.Is(err, dirigera.ErrHubTimeout):
+			log.Info("Discovery timed out, will retry in a moment")
+			time.Sleep(discoverRetryBackoff)
+		default:
+			return err
+		}
+	}
+	return err
+}
+
+// waitForShutdown blocks until sig or errs fires, signals done either way,
+// and returns the process exit code main should use. Takes plain channels
+// rather than reading os.Signal directly, so tests can drive it without a
+// real OS signal — same trick as receiptd's shutdownOnSignal.
+func waitForShutdown(sig <-chan os.Signal, errs <-chan error, done chan<- bool) int {
+	select {
+	case <-sig:
+		log.Info("Exiting...")
+		done <- true
+		return 0
+	case err := <-errs:
+		log.Error(err)
+		done <- true
+		return 1
+	}
+}
+
 func main() {
 	var debug bool
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
@@ -38,26 +87,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-discovery:
-	for range maxRetries {
-		err = hub.Discover()
-		switch {
-		case err == nil:
-			break discovery
-		case errors.Is(err, dirigera.ErrHubTimeout):
-			log.Info("Discovery timed out, will retry in a moment")
-			time.Sleep(time.Second)
-		default:
-			log.Fatal(err)
-		}
-	}
-
-	if err != nil {
+	if err := discoverWithRetry(hub, maxRetries); err != nil {
 		log.Fatal(err)
 	}
 
-	err = hub.Auth()
-	if err != nil {
+	if err := hub.Auth(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -69,9 +103,6 @@ discovery:
 
 	log.Info("Get history if exists")
 	r.GetHistory(dataFile)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	w := writer.New(update, r.History, done, errs)
 
@@ -94,24 +125,5 @@ discovery:
 		}
 	}(errs)
 
-	for {
-		select {
-		case <-sig:
-			log.Info("Exiting...")
-			done <- true
-			close(update)
-			close(sig)
-			close(errs)
-			close(done)
-			os.Exit(0)
-		case err := <-errs:
-			log.Error(err)
-			done <- true
-			close(update)
-			close(sig)
-			close(errs)
-			close(done)
-			os.Exit(1)
-		}
-	}
+	os.Exit(waitForShutdown(sig, errs, done))
 }

@@ -31,6 +31,19 @@ var httpClient = &http.Client{
 	},
 }
 
+// mdnsQuery and discoverTimeout are package variables, rather than a call to
+// mdns.Query and a local constant, purely so tests can substitute a fake
+// query and a short timeout instead of waiting on real mDNS traffic.
+var (
+	mdnsQuery       = mdns.Query
+	discoverTimeout = 60 * time.Second
+)
+
+// pairingDelay is how long Auth waits for the hub's physical button to be
+// pressed. A package variable, rather than a literal in Auth, so tests can
+// shrink it instead of a real test run taking 20 real seconds.
+var pairingDelay = 20 * time.Second
+
 type (
 	// Dirigera is a client for a single paired DIRIGERA hub.
 	Dirigera struct {
@@ -117,18 +130,17 @@ func (d *Dirigera) Discover() error {
 	}
 
 	entries := make(chan *mdns.ServiceEntry, 4)
-	timeout := 60 * time.Second
 	params := &mdns.QueryParam{
 		Service:             "_ihsp._tcp",
 		Domain:              "local",
-		Timeout:             timeout,
+		Timeout:             discoverTimeout,
 		Interface:           ifi,
 		Entries:             entries,
 		WantUnicastResponse: false,
 		DisableIPv4:         false,
 		DisableIPv6:         false,
 	}
-	err = mdns.Query(params)
+	err = mdnsQuery(params)
 	if err != nil {
 		return err
 	}
@@ -157,7 +169,7 @@ func (d *Dirigera) Discover() error {
 				close(entries)
 				return nil
 			}
-		case <-time.After(timeout):
+		case <-time.After(discoverTimeout):
 			return ErrHubTimeout
 		}
 	}
@@ -214,8 +226,8 @@ func (d *Dirigera) Auth() error {
 		return errors.New(response.Error + response.Message)
 	}
 
-	log.Info("Press button on hub (sleeping 20s)")
-	time.Sleep(20 * time.Second)
+	log.Infof("Press button on hub (sleeping %s)", pairingDelay)
+	time.Sleep(pairingDelay)
 
 	token, err := d.generateToken(response.Code, codeVerifier)
 	if err != nil {
