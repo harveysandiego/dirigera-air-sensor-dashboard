@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     -o querier ./cmd/querier
 
 # Stage 2: Create the final image
-FROM alpine:3.20
+FROM alpine:3.24
 
 ENV PUID=1000
 ENV PGID=1000
