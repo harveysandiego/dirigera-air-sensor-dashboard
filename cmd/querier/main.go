@@ -4,6 +4,7 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,6 +21,17 @@ import (
 const configFile = "config.json"
 const dataFile = "data.json"
 const maxRetries = 5
+
+// version, commit, and date are set via -ldflags at build time.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
+func versionLine() string {
+	return fmt.Sprintf("querier %s (commit %s, built %s)", version, commit, date)
+}
 
 // discoverRetryBackoff is a var, not a literal, so tests can skip the real wait between retries.
 var discoverRetryBackoff = time.Second
@@ -63,8 +75,15 @@ func waitForShutdown(sig <-chan os.Signal, errs <-chan error, done chan<- bool) 
 
 func main() {
 	var debug bool
+	var showVersion bool
 	flag.BoolVar(&debug, "debug", false, "Enable debug logging")
+	flag.BoolVar(&showVersion, "version", false, "Print version information and exit")
 	flag.Parse()
+
+	fmt.Println(versionLine())
+	if showVersion {
+		return
+	}
 
 	if debug {
 		log.SetLevel(log.DebugLevel)
