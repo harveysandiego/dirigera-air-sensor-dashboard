@@ -1,5 +1,4 @@
-// Package model holds the sensor reading types shared between the reader
-// and writer packages, including the concurrency-safe History store.
+// Package model holds the sensor reading types shared between reader and writer, including History.
 package model
 
 import (
@@ -19,8 +18,6 @@ type SensorData struct {
 }
 
 // History is a concurrency-safe store of sensor readings keyed by device ID.
-// It is shared between the reader goroutine (which appends) and the writer
-// goroutine and HTTP handler (which read it), so all access goes through mu.
 type History struct {
 	mu   sync.RWMutex
 	data map[string][]SensorData
@@ -31,8 +28,7 @@ func NewHistory() *History {
 	return &History{data: make(map[string][]SensorData)}
 }
 
-// Append adds entry for id, dropping the oldest entries once maxPoints is exceeded.
-// A maxPoints of 0 or less disables trimming.
+// Append adds entry for id, dropping the oldest once maxPoints is exceeded (0 or less disables trimming).
 func (h *History) Append(id string, entry SensorData, maxPoints int) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -52,8 +48,7 @@ func (h *History) Load(dec *json.Decoder) error {
 	return dec.Decode(&h.data)
 }
 
-// MarshalJSON allows History to be encoded directly, e.g. via
-// json.NewEncoder(w).Encode(history).
+// MarshalJSON allows History to be encoded directly via json.Marshal/Encode.
 func (h *History) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

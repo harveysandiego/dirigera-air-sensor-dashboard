@@ -15,9 +15,7 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
-// withFakeMDNS swaps mdnsQuery and discoverTimeout for the duration of a
-// test, restoring the originals afterward, so Discover can be exercised
-// without a real mDNS multicast query.
+// withFakeMDNS swaps mdnsQuery/discoverTimeout for the test's duration, so Discover skips real mDNS.
 func withFakeMDNS(t *testing.T, timeout time.Duration, query func(*mdns.QueryParam) error) {
 	t.Helper()
 	origQuery, origTimeout := mdnsQuery, discoverTimeout
@@ -44,8 +42,7 @@ func TestCreateCodeVerifier(t *testing.T) {
 	}
 }
 
-// TestCreateCodeChallenge checks against RFC 7636 Appendix B's own worked
-// example, rather than re-deriving the hash the same way the code does.
+// TestCreateCodeChallenge checks against RFC 7636 Appendix B's own worked example.
 func TestCreateCodeChallenge(t *testing.T) {
 	const verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
 	const want = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"

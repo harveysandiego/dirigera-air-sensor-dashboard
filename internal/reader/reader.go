@@ -1,5 +1,4 @@
-// Package reader polls a paired hub for sensor readings on a fixed
-// interval and appends them to a shared History.
+// Package reader polls a paired hub for sensor readings and appends them to a shared History.
 package reader
 
 import (
@@ -13,17 +12,13 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// maxHistoryPoints caps stored readings per device to roughly 30 days at
-// pollInterval's default, so data.json doesn't grow unbounded forever.
+// maxHistoryPoints caps stored readings per device to roughly 30 days at pollInterval's default.
 const maxHistoryPoints = 30 * 24 * 60 / 5
 
-// pollInterval is how often Start polls the hub after its initial read. A
-// package variable, rather than a literal in New, so tests can shrink it
-// instead of waiting on a real 5-minute ticker.
+// pollInterval is a var, not a New literal, so tests can shrink it instead of waiting on a real ticker.
 var pollInterval = 5 * time.Minute
 
-// sensorLister is the subset of *dirigera.Dirigera's API Reader depends on,
-// so tests can substitute a fake instead of a real hub connection.
+// sensorLister lets tests substitute a fake hub instead of a real connection.
 type sensorLister interface {
 	ListEnvironmentSensors() (*[]dirigera.Device, error)
 }
@@ -38,8 +33,7 @@ type Reader struct {
 	err     chan<- error
 }
 
-// New creates a Reader that polls hub every 5 minutes, signaling update
-// after each successful poll and sending any error to err.
+// New creates a Reader that signals update after each successful poll and sends errors to err.
 func New(hub sensorLister, update chan<- bool, done <-chan bool, err chan<- error) Reader {
 	return Reader{
 		hub:     hub,
@@ -51,8 +45,7 @@ func New(hub sensorLister, update chan<- bool, done <-chan bool, err chan<- erro
 	}
 }
 
-// GetHistory loads previously-saved readings from dataFile into r.History.
-// A missing file is not an error — it just means there's no history yet.
+// GetHistory loads previously-saved readings from dataFile into r.History. A missing file isn't an error.
 func (r *Reader) GetHistory(dataFile string) {
 	file, err := os.Open(dataFile)
 	if err != nil {

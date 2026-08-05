@@ -11,8 +11,7 @@ import (
 	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/dirigera"
 )
 
-// fakeLister is a test double for sensorLister — no real hub connection
-// needed to exercise read/Start.
+// fakeLister is a test double for sensorLister.
 type fakeLister struct {
 	devices []dirigera.Device
 	err     error
@@ -212,9 +211,7 @@ func TestStartPollsAgainOnTicker(t *testing.T) {
 	withShortPollInterval(t)
 	devices := unmarshalDevices(t, `[{"id":"1","deviceType":"environmentSensor","attributes":{"customName":"Kitchen"}}]`)
 
-	// Buffered generously: Start's goroutine must never block sending to
-	// update after we stop draining it below, or close(done) would never
-	// be noticed.
+	// Generous buffer: must never block once we stop draining below.
 	update := make(chan bool, 100)
 	done := make(chan bool)
 	errs := make(chan error, 1)

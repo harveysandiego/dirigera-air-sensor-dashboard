@@ -45,8 +45,7 @@ func TestWriteCreateFails(t *testing.T) {
 	}
 }
 
-// TestStartPropagatesWriteError checks that a failing write is sent to errs
-// and stops Start's loop, rather than being silently swallowed.
+// TestStartPropagatesWriteError checks a failing write reaches errs instead of being swallowed.
 func TestStartPropagatesWriteError(t *testing.T) {
 	history := model.NewHistory()
 	update := make(chan bool)
@@ -69,11 +68,7 @@ func TestStartPropagatesWriteError(t *testing.T) {
 	}
 }
 
-// TestStartWritesOnUpdate exercises Start's goroutine loop rather than write
-// directly. Sending on done only rendezvous once Start has looped back to
-// its select statement, which can only happen after the prior update case's
-// write call has already returned — so a successful done send proves the
-// write completed, with no sleep or polling required.
+// TestStartWritesOnUpdate: a successful done send only happens after Start's prior write returns, so it proves completion without polling.
 func TestStartWritesOnUpdate(t *testing.T) {
 	history := model.NewHistory()
 	history.Append("device-1", model.SensorData{Name: "Kitchen", Temperature: 21}, 0)

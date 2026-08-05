@@ -1,5 +1,4 @@
-// Command querier pairs with an IKEA DIRIGERA hub, polls its VINDSTYRKA air
-// quality sensors, and serves a graphed history of their readings over HTTP.
+// Command querier pairs with an IKEA DIRIGERA hub and serves a graphed history of its air sensor readings over HTTP.
 package main
 
 import (
@@ -22,21 +21,15 @@ const configFile = "config.json"
 const dataFile = "data.json"
 const maxRetries = 5
 
-// discoverRetryBackoff is how long discoverWithRetry pauses between a
-// timed-out discovery attempt and the next one. A package variable, rather
-// than a literal, so tests can shrink it instead of a real test run taking
-// several real seconds.
+// discoverRetryBackoff is a var, not a literal, so tests can skip the real wait between retries.
 var discoverRetryBackoff = time.Second
 
-// discoverer is the subset of *dirigera.Dirigera's API discoverWithRetry
-// depends on, so tests can substitute a fake instead of real mDNS.
+// discoverer lets tests substitute a fake instead of real mDNS.
 type discoverer interface {
 	Discover() error
 }
 
-// discoverWithRetry calls d.Discover() up to maxRetries times, pausing and
-// retrying whenever it times out, and returns the first non-timeout result
-// (success, or a fatal error) — or the last timeout, if every attempt did.
+// discoverWithRetry retries d.Discover() up to maxRetries times on timeout, returning the first non-timeout result.
 func discoverWithRetry(d discoverer, maxRetries int) error {
 	var err error
 	for range maxRetries {
@@ -54,10 +47,7 @@ func discoverWithRetry(d discoverer, maxRetries int) error {
 	return err
 }
 
-// waitForShutdown blocks until sig or errs fires, signals done either way,
-// and returns the process exit code main should use. Takes plain channels
-// rather than reading os.Signal directly, so tests can drive it without a
-// real OS signal — same trick as receiptd's shutdownOnSignal.
+// waitForShutdown blocks until sig or errs fires, signals done, and returns the exit code main should use.
 func waitForShutdown(sig <-chan os.Signal, errs <-chan error, done chan<- bool) int {
 	select {
 	case <-sig:

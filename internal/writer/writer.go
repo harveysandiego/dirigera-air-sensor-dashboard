@@ -1,5 +1,4 @@
-// Package writer persists a shared History to disk on update and serves it
-// over HTTP as JSON.
+// Package writer persists a shared History to disk on update and serves it over HTTP as JSON.
 package writer
 
 import (
@@ -10,8 +9,7 @@ import (
 	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/model"
 )
 
-// Writer writes history to dataFile whenever update fires, and serves it
-// over HTTP via ServeData.
+// Writer writes history to dataFile whenever update fires, and serves it over HTTP via ServeData.
 type Writer struct {
 	update  <-chan bool
 	history *model.History
@@ -19,8 +17,7 @@ type Writer struct {
 	err     chan<- error
 }
 
-// New creates a Writer over history, writing to disk each time update fires
-// until done is closed.
+// New creates a Writer that writes history to disk each time update fires, until done is closed.
 func New(update <-chan bool, history *model.History, done <-chan bool, err chan<- error) Writer {
 	return Writer{
 		update:  update,

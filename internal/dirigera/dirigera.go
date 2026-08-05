@@ -1,5 +1,4 @@
-// Package dirigera talks to an IKEA DIRIGERA smart home hub: discovering it
-// via mDNS, pairing with it over OAuth/PKCE, and querying its devices.
+// Package dirigera discovers an IKEA DIRIGERA hub via mDNS, pairs with it over OAuth/PKCE, and queries its devices.
 package dirigera
 
 import (
@@ -23,26 +22,19 @@ import (
 	"github.com/hashicorp/mdns"
 )
 
-// httpClient is used for all requests to the hub, which presents a
-// self-signed certificate, instead of mutating http.DefaultTransport globally.
+// httpClient trusts the hub's self-signed cert, scoped here rather than mutating http.DefaultTransport globally.
 var httpClient = &http.Client{
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	},
 }
 
-// mdnsQuery and discoverTimeout are package variables, rather than a call to
-// mdns.Query and a local constant, purely so tests can substitute a fake
-// query and a short timeout instead of waiting on real mDNS traffic.
+// Package vars (not literals/direct calls) so tests can fake mDNS and skip real wait times.
 var (
 	mdnsQuery       = mdns.Query
 	discoverTimeout = 60 * time.Second
+	pairingDelay    = 20 * time.Second
 )
-
-// pairingDelay is how long Auth waits for the hub's physical button to be
-// pressed. A package variable, rather than a literal in Auth, so tests can
-// shrink it instead of a real test run taking 20 real seconds.
-var pairingDelay = 20 * time.Second
 
 type (
 	// Dirigera is a client for a single paired DIRIGERA hub.
@@ -86,8 +78,7 @@ type (
 // ErrHubTimeout is returned by Discover when no hub responds within the mDNS query window.
 var ErrHubTimeout = errors.New("timeout discovering hub")
 
-// New loads a Dirigera client from filename, or returns an empty, unpaired
-// client if the file doesn't exist yet.
+// New loads a Dirigera from filename, or an empty unpaired client if it doesn't exist yet.
 func New(filename string) (*Dirigera, error) {
 	diregera := &Dirigera{
 		configFile: filename,
@@ -175,9 +166,7 @@ func (d *Dirigera) Discover() error {
 	}
 }
 
-// Auth performs the PKCE pairing handshake against a discovered hub,
-// prompting for a physical button press on the hub, and persists the
-// resulting token to configFile. It's a no-op if already paired.
+// Auth runs the PKCE pairing handshake, prompting for the hub's button, and persists the token. No-op if already paired.
 func (d *Dirigera) Auth() error {
 	if d.hubUrl == "" {
 		return errors.New("hub URL not set")
@@ -303,8 +292,7 @@ func (d Dirigera) saveConfig() error {
 	return nil
 }
 
-// ListEnvironmentSensors returns the hub's paired environmentSensor devices
-// (e.g. VINDSTYRKA air quality sensors), filtered out of its full device list.
+// ListEnvironmentSensors returns the hub's environmentSensor devices (e.g. VINDSTYRKA sensors).
 func (d Dirigera) ListEnvironmentSensors() (*[]Device, error) {
 	req, err := http.NewRequest("GET", d.hubUrl+"/v1/devices", nil)
 	if err != nil {

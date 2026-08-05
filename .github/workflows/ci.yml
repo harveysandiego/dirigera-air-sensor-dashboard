@@ -67,9 +67,7 @@ jobs:
       - name: Coverage
         run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
 
-      # fail_ci_if_error is false so a Codecov outage can't fail this repo's
-      # own CI. No token: this is a public repo, so Codecov's tokenless
-      # uploader applies; add a CODECOV_TOKEN secret if uploads prove flaky.
+      # Public repo, so Codecov's tokenless uploader applies; add CODECOV_TOKEN if it proves flaky.
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:

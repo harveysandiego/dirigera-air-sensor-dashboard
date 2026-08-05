@@ -35,8 +35,7 @@ jobs:
         with:
           go-version: stable
 
-      # No CGO dependencies (see Dockerfile's CGO_ENABLED=0), so cross-compiling
-      # for both common homelab/Pi targets needs nothing beyond GOOS/GOARCH.
+      # No CGO deps (Dockerfile uses CGO_ENABLED=0), so plain GOOS/GOARCH cross-compiles fine.
       - name: Build binaries
         run: |
           mkdir dist
