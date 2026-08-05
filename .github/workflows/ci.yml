@@ -95,3 +95,10 @@ jobs:
         with:
           go-version: stable
       - run: go build ./...
+
+  docker:
+    name: docker build (smoke)
+    needs: [format, vet, lint, test]
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      push: false

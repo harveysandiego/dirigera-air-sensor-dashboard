@@ -39,11 +39,15 @@ jobs:
       - name: Build binaries
         run: |
           mkdir dist
+          VERSION="${GITHUB_REF_NAME#v}"
+          DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           for platform in linux/amd64 linux/arm64; do
             GOOS="${platform%/*}"
             GOARCH="${platform#*/}"
             out="dist/querier-${GOOS}-${GOARCH}"
-            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build -o "$out" ./cmd/querier
+            CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" go build -trimpath \
+              -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GITHUB_SHA} -X main.date=${DATE}" \
+              -o "$out" ./cmd/querier
           done
 
       - name: Create release
@@ -53,3 +57,22 @@ jobs:
           gh release create "$GITHUB_REF_NAME" dist/* \
             --title "$GITHUB_REF_NAME" \
             --generate-notes
+
+  docker:
+    name: publish container image
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      push: true
+
+  pkg-go-dev:
+    name: notify pkg.go.dev
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      # pkg.go.dev only indexes a version once something requests it from the
+      # module proxy, so this makes that first request automatically.
+      - run: curl -sf "https://proxy.golang.org/github.com/harveysandiego/dirigera-air-sensor-dashboard/@v/${GITHUB_REF_NAME}.info"
