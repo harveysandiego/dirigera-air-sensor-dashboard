@@ -1,9 +1,8 @@
 # Dirigera Air Quality Sensor Dashboard
 
 [![Go CI](https://github.com/harveysandiego/dirigera-air-sensor-dashboard/actions/workflows/go.yaml/badge.svg)](https://github.com/harveysandiego/dirigera-air-sensor-dashboard/actions/workflows/go.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/harveysandiego/dirigera-air-sensor-dashboard)](https://goreportcard.com/report/github.com/harveysandiego/dirigera-air-sensor-dashboard)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/harveysandiego/dirigera-air-sensor-dashboard)](go.mod)
-[![License: MIT](https://img.shields.io/github/license/harveysandiego/dirigera-air-sensor-dashboard)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Written in Go, pulls information from IKEA VINDSTYRKA air quality sensors and serves a web page with graphs to display it.
 
