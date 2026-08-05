@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
       - run: go test -race ./...
 
   release:
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
 
       # No CGO dependencies (see Dockerfile's CGO_ENABLED=0), so cross-compiling
       # for both common homelab/Pi targets needs nothing beyond GOOS/GOARCH.

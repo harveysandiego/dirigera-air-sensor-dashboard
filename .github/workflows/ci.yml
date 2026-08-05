@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
       - name: Check gofmt
         run: |
           out=$(gofmt -l .)
@@ -37,7 +37,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
       - run: go vet ./...
 
   lint:
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
       - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
 
       - name: go test -race
         run: go test -race ./...
@@ -83,7 +83,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
       - run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - run: govulncheck ./...
 
@@ -95,5 +95,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
       - run: go build ./...
