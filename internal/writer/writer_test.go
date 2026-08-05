@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/model"
 )
@@ -31,6 +32,40 @@ func TestWrite(t *testing.T) {
 	}
 	if len(got["device-1"]) != 1 || got["device-1"][0].Name != "Kitchen" {
 		t.Fatalf("got %+v, want one Kitchen entry", got)
+	}
+}
+
+func TestWriteCreateFails(t *testing.T) {
+	history := model.NewHistory()
+	w := New(nil, history, nil, nil)
+	dataFile := filepath.Join(t.TempDir(), "no-such-dir", "data.json")
+
+	if err := w.write(dataFile); err == nil {
+		t.Fatal("expected an error writing to a nonexistent directory, got nil")
+	}
+}
+
+// TestStartPropagatesWriteError checks that a failing write is sent to errs
+// and stops Start's loop, rather than being silently swallowed.
+func TestStartPropagatesWriteError(t *testing.T) {
+	history := model.NewHistory()
+	update := make(chan bool)
+	done := make(chan bool)
+	errs := make(chan error, 1)
+
+	w := New(update, history, done, errs)
+	dataFile := filepath.Join(t.TempDir(), "no-such-dir", "data.json")
+	go w.Start(dataFile)
+
+	update <- true
+
+	select {
+	case err := <-errs:
+		if err == nil {
+			t.Fatal("got nil error on errs")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected a write failure to be sent to errs")
 	}
 }
 
