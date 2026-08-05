@@ -1,4 +1,4 @@
-module dirigeraquerier
+module github.com/harveysandiego/dirigera-air-sensor-dashboard
 
 go 1.25.0
 

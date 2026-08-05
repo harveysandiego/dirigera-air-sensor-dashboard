@@ -1,3 +1,5 @@
+// Package dirigera talks to an IKEA DIRIGERA smart home hub: discovering it
+// via mDNS, pairing with it over OAuth/PKCE, and querying its devices.
 package dirigera
 
 import (
@@ -30,6 +32,7 @@ var httpClient = &http.Client{
 }
 
 type (
+	// Dirigera is a client for a single paired DIRIGERA hub.
 	Dirigera struct {
 		configFile string
 		hubUrl     string
@@ -44,6 +47,7 @@ type (
 		Message     string `json:"message"`
 	}
 
+	// Device is a hub-managed device, as returned by the hub's /v1/devices endpoint.
 	Device struct {
 		ID         string    `json:"id"`
 		Type       string    `json:"type"`
@@ -66,8 +70,11 @@ type (
 	}
 )
 
-var HubTimeout = errors.New("timeout discovering hub")
+// ErrHubTimeout is returned by Discover when no hub responds within the mDNS query window.
+var ErrHubTimeout = errors.New("timeout discovering hub")
 
+// New loads a Dirigera client from filename, or returns an empty, unpaired
+// client if the file doesn't exist yet.
 func New(filename string) (*Dirigera, error) {
 	diregera := &Dirigera{
 		configFile: filename,
@@ -82,7 +89,7 @@ func New(filename string) (*Dirigera, error) {
 
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	log.Debug("Reading config")
 	decoder := json.NewDecoder(file)
@@ -95,6 +102,7 @@ func New(filename string) (*Dirigera, error) {
 	return diregera, nil
 }
 
+// Discover finds a hub on the local network via mDNS and records its URL.
 func (d *Dirigera) Discover() error {
 	var ifi *net.Interface
 	var err error
@@ -150,11 +158,14 @@ func (d *Dirigera) Discover() error {
 				return nil
 			}
 		case <-time.After(timeout):
-			return HubTimeout
+			return ErrHubTimeout
 		}
 	}
 }
 
+// Auth performs the PKCE pairing handshake against a discovered hub,
+// prompting for a physical button press on the hub, and persists the
+// resulting token to configFile. It's a no-op if already paired.
 func (d *Dirigera) Auth() error {
 	if d.hubUrl == "" {
 		return errors.New("hub URL not set")
@@ -186,7 +197,7 @@ func (d *Dirigera) Auth() error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -245,7 +256,7 @@ func (d Dirigera) generateToken(code string, codeVerifier string) (string, error
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -270,7 +281,7 @@ func (d Dirigera) saveConfig() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	err = json.NewEncoder(file).Encode(d)
 	if err != nil {
@@ -280,6 +291,8 @@ func (d Dirigera) saveConfig() error {
 	return nil
 }
 
+// ListEnvironmentSensors returns the hub's paired environmentSensor devices
+// (e.g. VINDSTYRKA air quality sensors), filtered out of its full device list.
 func (d Dirigera) ListEnvironmentSensors() (*[]Device, error) {
 	req, err := http.NewRequest("GET", d.hubUrl+"/v1/devices", nil)
 	if err != nil {
@@ -293,7 +306,7 @@ func (d Dirigera) ListEnvironmentSensors() (*[]Device, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -301,7 +314,7 @@ func (d Dirigera) ListEnvironmentSensors() (*[]Device, error) {
 	}
 
 	var devices []Device
-	err = json.Unmarshal([]byte(body), &devices)
+	err = json.Unmarshal(body, &devices)
 	if err != nil {
 		return nil, err
 	}

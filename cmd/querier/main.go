@@ -1,9 +1,8 @@
+// Command querier pairs with an IKEA DIRIGERA hub, polls its VINDSTYRKA air
+// quality sensors, and serves a graphed history of their readings over HTTP.
 package main
 
 import (
-	"dirigeraquerier/internal/dirigera"
-	"dirigeraquerier/internal/reader"
-	"dirigeraquerier/internal/writer"
 	"errors"
 	"flag"
 	"net/http"
@@ -11,6 +10,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/dirigera"
+	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/reader"
+	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/writer"
 
 	"github.com/charmbracelet/log"
 )
@@ -41,7 +44,7 @@ discovery:
 		switch {
 		case err == nil:
 			break discovery
-		case errors.Is(err, dirigera.HubTimeout):
+		case errors.Is(err, dirigera.ErrHubTimeout):
 			log.Info("Discovery timed out, will retry in a moment")
 			time.Sleep(time.Second)
 		default:

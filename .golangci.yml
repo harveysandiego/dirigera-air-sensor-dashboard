@@ -1,0 +1,42 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - bodyclose
+    - errorlint
+    - unconvert
+    - unparam
+    - misspell
+    - revive
+    - gocritic
+    - nolintlint
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: package-comments
+          disabled: false
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/harveysandiego/dirigera-air-sensor-dashboard
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

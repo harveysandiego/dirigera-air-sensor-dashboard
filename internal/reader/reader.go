@@ -1,11 +1,14 @@
+// Package reader polls a paired hub for sensor readings on a fixed
+// interval and appends them to a shared History.
 package reader
 
 import (
-	"dirigeraquerier/internal/dirigera"
-	"dirigeraquerier/internal/model"
 	"encoding/json"
 	"os"
 	"time"
+
+	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/dirigera"
+	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/model"
 
 	"github.com/charmbracelet/log"
 )
@@ -14,6 +17,7 @@ import (
 // 5-minute poll interval below, so data.json doesn't grow unbounded forever.
 const maxHistoryPoints = 30 * 24 * 60 / 5
 
+// Reader polls a hub on a ticker and appends each reading to History.
 type Reader struct {
 	dirigera *dirigera.Dirigera
 	update   chan<- bool
@@ -23,6 +27,8 @@ type Reader struct {
 	err      chan<- error
 }
 
+// New creates a Reader that polls hub every 5 minutes, signaling update
+// after each successful poll and sending any error to err.
 func New(dirigera *dirigera.Dirigera, update chan<- bool, done <-chan bool, err chan<- error) Reader {
 	return Reader{
 		dirigera: dirigera,
@@ -34,6 +40,8 @@ func New(dirigera *dirigera.Dirigera, update chan<- bool, done <-chan bool, err 
 	}
 }
 
+// GetHistory loads previously-saved readings from dataFile into r.History.
+// A missing file is not an error — it just means there's no history yet.
 func (r *Reader) GetHistory(dataFile string) {
 	file, err := os.Open(dataFile)
 	if err != nil {
@@ -45,7 +53,7 @@ func (r *Reader) GetHistory(dataFile string) {
 		r.err <- err
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	log.Debug("Reading history")
 	err = r.History.Load(json.NewDecoder(file))
@@ -55,6 +63,7 @@ func (r *Reader) GetHistory(dataFile string) {
 	}
 }
 
+// Start polls immediately, then again every 5 minutes, until done is closed.
 func (r Reader) Start() {
 	r.read()
 

@@ -1,3 +1,5 @@
+// Package model holds the sensor reading types shared between the reader
+// and writer packages, including the concurrency-safe History store.
 package model
 
 import (
@@ -6,6 +8,7 @@ import (
 	"time"
 )
 
+// SensorData is a single sensor reading at a point in time.
 type SensorData struct {
 	Name        string
 	Timestamp   time.Time
@@ -23,6 +26,7 @@ type History struct {
 	data map[string][]SensorData
 }
 
+// NewHistory returns an empty History, ready to use.
 func NewHistory() *History {
 	return &History{data: make(map[string][]SensorData)}
 }
@@ -33,6 +37,7 @@ func (h *History) Append(id string, entry SensorData, maxPoints int) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	//nolint:gocritic // intentional: entries is trimmed before being written back to h.data[id]
 	entries := append(h.data[id], entry)
 	if maxPoints > 0 && len(entries) > maxPoints {
 		entries = entries[len(entries)-maxPoints:]
