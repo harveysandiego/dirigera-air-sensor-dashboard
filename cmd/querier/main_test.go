@@ -9,6 +9,16 @@ import (
 	"github.com/harveysandiego/dirigera-air-sensor-dashboard/internal/dirigera"
 )
 
+func TestVersionLine(t *testing.T) {
+	origVersion, origCommit, origDate := version, commit, date
+	version, commit, date = "1.2.3", "abcdef", "2026-01-01"
+	defer func() { version, commit, date = origVersion, origCommit, origDate }()
+
+	if got, want := versionLine(), "querier 1.2.3 (commit abcdef, built 2026-01-01)"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
 type fakeDiscoverer struct {
 	results []error
 	calls   int
