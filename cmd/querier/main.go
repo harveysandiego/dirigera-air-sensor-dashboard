@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"dirigeraquerier/internal/dirigera"
 	"dirigeraquerier/internal/reader"
 	"dirigeraquerier/internal/writer"
@@ -30,9 +29,6 @@ func main() {
 	} else {
 		log.SetLevel(log.InfoLevel)
 	}
-
-	// Hub has self-signed cert
-	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	hub, err := dirigera.New(configFile)
 	if err != nil {

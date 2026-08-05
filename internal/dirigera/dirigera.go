@@ -1,13 +1,15 @@
 package dirigera
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"math/rand"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,6 +20,14 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/hashicorp/mdns"
 )
+
+// httpClient is used for all requests to the hub, which presents a
+// self-signed certificate, instead of mutating http.DefaultTransport globally.
+var httpClient = &http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	},
+}
 
 type (
 	Dirigera struct {
@@ -172,7 +182,7 @@ func (d *Dirigera) Auth() error {
 	authUrl.RawQuery = authParams.Encode()
 
 	log.Debug("Get auth code")
-	resp, err := http.Get(authUrl.String())
+	resp, err := httpClient.Get(authUrl.String())
 	if err != nil {
 		return err
 	}
@@ -231,8 +241,7 @@ func (d Dirigera) generateToken(code string, codeVerifier string) (string, error
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	log.Debug("Post auth code")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -279,9 +288,8 @@ func (d Dirigera) ListEnvironmentSensors() (*[]Device, error) {
 
 	req.Header.Set("Authorization", "Bearer "+d.AuthToken)
 
-	client := &http.Client{}
 	log.Debug("Get list of devices")
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -311,10 +319,13 @@ func (d Dirigera) ListEnvironmentSensors() (*[]Device, error) {
 func createCodeVerifier() string {
 	charset := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 	codeLength := 128
-	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 	b := make([]byte, codeLength)
 	for i := range b {
-		b[i] = charset[rnd.Intn(len(charset))]
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			log.Fatal(err)
+		}
+		b[i] = charset[n.Int64()]
 	}
 	return string(b)
 }

@@ -10,10 +10,14 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+// maxHistoryPoints caps stored readings per device to roughly 30 days at the
+// 5-minute poll interval below, so data.json doesn't grow unbounded forever.
+const maxHistoryPoints = 30 * 24 * 60 / 5
+
 type Reader struct {
 	dirigera *dirigera.Dirigera
 	update   chan<- bool
-	History  *map[string][]model.SensorData
+	History  *model.History
 	ticker   *time.Ticker
 	done     <-chan bool
 	err      chan<- error
@@ -23,6 +27,7 @@ func New(dirigera *dirigera.Dirigera, update chan<- bool, done <-chan bool, err 
 	return Reader{
 		dirigera: dirigera,
 		update:   update,
+		History:  model.NewHistory(),
 		ticker:   time.NewTicker(5 * time.Minute),
 		done:     done,
 		err:      err,
@@ -30,9 +35,6 @@ func New(dirigera *dirigera.Dirigera, update chan<- bool, done <-chan bool, err 
 }
 
 func (r *Reader) GetHistory(dataFile string) {
-	history := make(map[string][]model.SensorData)
-	r.History = &history
-
 	file, err := os.Open(dataFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -46,13 +48,11 @@ func (r *Reader) GetHistory(dataFile string) {
 	defer file.Close()
 
 	log.Debug("Reading history")
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&history)
+	err = r.History.Load(json.NewDecoder(file))
 	if err != nil {
 		r.err <- err
 		return
 	}
-	log.Debug(history)
 }
 
 func (r Reader) Start() {
@@ -78,7 +78,6 @@ func (r *Reader) read() {
 	log.Debug(*devices)
 
 	for _, device := range *devices {
-		history := *r.History
 		newData := model.SensorData{
 			Name:        device.Attributes.CustomName,
 			Timestamp:   time.Now(),
@@ -87,7 +86,7 @@ func (r *Reader) read() {
 			PM25:        device.Attributes.CurrentPM25,
 			VocIndex:    device.Attributes.VocIndex,
 		}
-		history[device.ID] = append(history[device.ID], newData)
+		r.History.Append(device.ID, newData, maxHistoryPoints)
 	}
 
 	r.update <- true
