@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # golang:1.25 matches go.mod's `go 1.25` minimum — bump both together.
-FROM golang:1.25-bookworm AS builder
+FROM golang:1.27-bookworm AS builder
 
 WORKDIR /usr/src/app
 
